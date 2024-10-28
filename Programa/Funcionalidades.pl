@@ -172,6 +172,145 @@ mostrar_actividades_precio(Monto, 2) :-  % Más caras
     fail.
 mostrar_actividades_precio(_, _).
 
+itinerario_por_monto :-
+    write('Ingrese el monto máximo disponible: '),
+    read(MontoMax),
+    write('Ingrese la categoría de preferencia: '),
+    read(Categoria),
+    write('Ingrese la cantidad de personas: '),
+    read(NumPersonas),
+    write('¿Prefiere estancias largas? (s/n): '),
+    read(PrefLargas),
+    nl, write('=== ITINERARIO GENERADO ==='), nl,
+    generar_itinerario_monto(MontoMax, Categoria, NumPersonas, PrefLargas, Itinerario),
+    mostrar_itinerario(Itinerario).
+
+generar_itinerario_monto(MontoMax, Categoria, NumPersonas, PrefLargas, Itinerario) :-
+    findall(act(Nombre, Costo, Duracion, Tipos),
+            actividad(Nombre, Costo, Duracion, _, Tipos),
+            TodasActividades),
+    ordenar_por_preferencia(TodasActividades, PrefLargas, ActividadesOrdenadas),
+    seleccionar_actividades_monto(ActividadesOrdenadas, MontoMax, NumPersonas,
+                                 Categoria, [], Itinerario).
+
+seleccionar_actividades_monto([], _, _, _, Acc, Acc).
+seleccionar_actividades_monto([Act|Resto], MontoMax, NumPersonas, Categoria, Acc, Resultado) :-
+    Act = act(_, Costo, _, Tipos),
+    CostoTotal is Costo * NumPersonas,
+    suma_costos(Acc, NumPersonas, CostoAcc),
+    NuevoCosto is CostoTotal + CostoAcc,
+    NuevoCosto =< MontoMax,
+    prioridad_categoria(Tipos, Categoria, Prioridad),
+    Prioridad > 0,
+    !,
+    seleccionar_actividades_monto(Resto, MontoMax, NumPersonas, Categoria, [Act|Acc], Resultado).
+seleccionar_actividades_monto([_|Resto], MontoMax, NumPersonas, Categoria, Acc, Resultado) :-
+    seleccionar_actividades_monto(Resto, MontoMax, NumPersonas, Categoria, Acc, Resultado).
+
+% Generar itinerario por días
+itinerario_por_dias :-
+    write('Ingrese la cantidad máxima de días: '),
+    read(MaxDias),
+    write('Ingrese la categoría de preferencia: '),
+    read(Categoria),
+    generar_itinerario_dias(MaxDias, Categoria, 1, Itinerario),
+    mostrar_itinerario(Itinerario),
+    write('¿Desea generar otro itinerario? (s/n): '),
+    read(Respuesta),
+    (Respuesta = s ->
+        generar_itinerario_dias(MaxDias, Categoria, 2, NuevoItinerario),
+        mostrar_itinerario(NuevoItinerario)
+    ; true).
+
+generar_itinerario_dias(MaxDias, Categoria, Criterio, Itinerario) :-
+    findall(act(Nombre, Costo, Duracion, Tipos),
+            actividad(Nombre, Costo, Duracion, _, Tipos),
+            TodasActividades),
+    % Criterio 1: Prioriza duración, Criterio 2: Prioriza variedad de tipos
+    (Criterio = 1 ->
+        ordenar_por_duracion(TodasActividades, ActividadesOrdenadas)
+    ;
+        ordenar_por_variedad_tipos(TodasActividades, ActividadesOrdenadas)
+    ),
+    seleccionar_actividades_dias(ActividadesOrdenadas, MaxDias, Categoria, [], Itinerario).
+
+%Ordenar actividades por duración
+:- dynamic ordenar_por_duracion/2.
+:- dynamic ordenar_por_variedad_tipos/2.
+ordenar_por_duracion(Actividades, Ordenadas) :-
+    % Ordena las actividades por su duración (tercer elemento del término act/4)
+    sort(3, @=<, Actividades, Ordenadas).
+
+% Ordenar actividades por variedad de tipos
+ordenar_por_variedad_tipos(Actividades, Ordenadas) :-
+    % Calcula la puntuación de variedad para cada actividad
+    findall(Puntuacion-Actividad,
+            (member(Actividad, Actividades),
+             Actividad = act(_, _, _, Tipos),
+             calcular_puntuacion_variedad(Tipos, Puntuacion)),
+            PuntuacionesActividades),
+    % Ordena por puntuación y extrae solo las actividades
+    sort(1, @>=, PuntuacionesActividades, OrdenadosPorPuntuacion),
+    findall(Act, member(_-Act, OrdenadosPorPuntuacion), Ordenadas).
+
+% Calcula una puntuación basada en la variedad de tipos
+calcular_puntuacion_variedad(Tipos, Puntuacion) :-
+    % Obtiene todos los tipos únicos de todas las actividades
+    findall(T,
+            (actividad(_, _, _, _, TodosTipos),
+             member(T, TodosTipos)),
+            TodosLosTipos),
+    sort(TodosLosTipos, TiposUnicos),
+    % Calcula cuántos tipos diferentes tiene esta actividad
+    intersection(Tipos, TiposUnicos, TiposComunes),
+    length(TiposComunes, CantidadTipos),
+    % Añade puntos extra por tipos que tienen relaciones
+    findall(1,
+            (member(T1, Tipos),
+             member(T2, Tipos),
+             T1 \= T2,
+             categorias_relacionadas(T1, T2)),
+            PuntosRelaciones),
+    length(PuntosRelaciones, PuntosExtra),
+    Puntuacion is CantidadTipos + PuntosExtra.
+
+% Ejemplo de uso en seleccionar_actividades_dias
+seleccionar_actividades_dias([], _, _, Acc, Acc).
+seleccionar_actividades_dias([Act|Resto], MaxDias, Categoria, Acc, Resultado) :-
+    Act = act(_, _, Duracion, Tipos),
+    suma_duracion(Acc, DuracionAcc),
+    NuevaDuracion is Duracion + DuracionAcc,
+    NuevaDuracion =< MaxDias,
+    prioridad_categoria(Tipos, Categoria, Prioridad),
+    Prioridad > 0,
+    !,
+    seleccionar_actividades_dias(Resto, MaxDias, Categoria, [Act|Acc], Resultado).
+seleccionar_actividades_dias([_|Resto], MaxDias, Categoria, Acc, Resultado) :-
+    seleccionar_actividades_dias(Resto, MaxDias, Categoria, Acc, Resultado).
+
+% Función auxiliar para sumar la duración de las actividades
+suma_duracion([], 0).
+suma_duracion([act(_, _, Duracion, _)|Resto], Total) :-
+    suma_duracion(Resto, SubTotal),
+    Total is SubTotal + Duracion.
+
+% Iniciar el programa
+%:- menu_principal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
