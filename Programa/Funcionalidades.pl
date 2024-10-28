@@ -124,7 +124,24 @@ calcular_totales_destino(Destino) :-
     write('Costo total: $'), write(CostoTotal), nl,
     write('Duracion total: '), write(DuracionTotal), write(' dias'), nl.
 
+% Actividades por tipo
+actividades_por_tipo :-
+    write('Ingrese el tipo de actividad a consultar: '),
+    read(Tipo),
+    nl, write('=== ACTIVIDADES DE TIPO '), write(Tipo), write(' ==='), nl,
+    buscar_actividades_tipo(Tipo).
 
+buscar_actividades_tipo(Tipo) :-
+    actividad(Nombre, Costo, Duracion, Desc, Tipos),
+    member(Tipo, Tipos),
+    findall(Dest, asociar_actividad(Dest, Nombre), Destinos),
+    write('Actividad: '), write(Nombre), nl,
+    write('Costo: $'), write(Costo), nl,
+    write('Duracion: '), write(Duracion), write(' dias'), nl,
+    write('Descripcion: '), write(Desc), nl,
+    write('Destinos: '), write(Destinos), nl, nl,
+    fail.
+buscar_actividades_tipo(_).
 
 
 
