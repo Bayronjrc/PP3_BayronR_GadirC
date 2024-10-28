@@ -143,7 +143,34 @@ buscar_actividades_tipo(Tipo) :-
     fail.
 buscar_actividades_tipo(_).
 
+% Consulta por precio
+consulta_por_precio :-
+    write('Ingrese el monto de referencia: '),
+    read(Monto),
+    write('¿Desea ver actividades mas baratas (1) o mas caras (2)?: '),
+    read(Opcion),
+    nl, write('=== ACTIVIDADES ENCONTRADAS ==='), nl,
+    mostrar_actividades_precio(Monto, Opcion).
 
+mostrar_actividades_precio(Monto, 1) :-  % Más baratas
+    actividad(Nombre, Costo, Duracion, Desc, Tipos),
+    Costo =< Monto,
+    write('Actividad: '), write(Nombre), nl,
+    write('Costo: $'), write(Costo), nl,
+    write('Duracion: '), write(Duracion), write(' dias'), nl,
+    write('Descripcion: '), write(Desc), nl,
+    write('Tipos: '), write(Tipos), nl, nl,
+    fail.
+mostrar_actividades_precio(Monto, 2) :-  % Más caras
+    actividad(Nombre, Costo, Duracion, Desc, Tipos),
+    Costo >= Monto,
+    write('Actividad: '), write(Nombre), nl,
+    write('Costo: $'), write(Costo), nl,
+    write('Duracion: '), write(Duracion), write(' dias'), nl,
+    write('Descripcion: '), write(Desc), nl,
+    write('Tipos: '), write(Tipos), nl, nl,
+    fail.
+mostrar_actividades_precio(_, _).
 
 
 
