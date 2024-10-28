@@ -234,6 +234,67 @@ generar_itinerario_dias(MaxDias, Categoria, Criterio, Itinerario) :-
     ),
     seleccionar_actividades_dias(ActividadesOrdenadas, MaxDias, Categoria, [], Itinerario).
 
+% Opción principal para recomendar por frase
+recomendar_por_frase :-
+    write('Ingrese su frase de búsqueda: '),
+    read_pending_input(user_input, _, []), % Consume cualquier entrada residual
+    read_line_to_string(user_input, Frase),
+    generar_itinerario_por_frase(Frase).
+
+% Lista de palabras ignoradas (artículos, preposiciones, etc.)
+palabra_ignorada(el).
+palabra_ignorada(la).
+palabra_ignorada(los).
+palabra_ignorada(las).
+palabra_ignorada(de).
+palabra_ignorada(y).
+palabra_ignorada(en).
+palabra_ignorada(con).
+palabra_ignorada(por).
+
+% Generar el itinerario basándose en la frase
+generar_itinerario_por_frase(Frase) :-
+    atomic_list_concat(Palabras, ' ', Frase),
+    exclude(palabra_ignorada, Palabras, PalabrasClave),
+    buscar_actividades_unicas(PalabrasClave, ActividadesUnicas),
+    mostrar_actividades(ActividadesUnicas).
+
+% Buscar actividades eliminando duplicados
+buscar_actividades_unicas(PalabrasClave, ActividadesUnicas) :-
+    findall(
+        Actividad,
+        (
+            member(Palabra, PalabrasClave),
+            (
+                actividad(Actividad, _, _, Descripcion, Tipos),
+                (sub_atom(Descripcion, _, _, _, Palabra); member(Palabra, Tipos))
+            ;
+                destino(Destino, _),
+                asociar_actividad(Destino, Actividad),
+                sub_atom(Destino, _, _, _, Palabra)
+            )
+        ),
+        TodasActividades
+    ),
+    list_to_set(TodasActividades, ActividadesUnicas).
+
+
+% Mostrar actividades al usuario
+mostrar_actividades([]) :-
+    write('No se encontraron actividades que coincidan con la frase ingresada.'), nl.
+mostrar_actividades(Actividades) :-
+    write('Actividades recomendadas:'), nl,
+    listar_actividades(Actividades).
+
+% Lista las actividades encontradas
+listar_actividades([]).
+listar_actividades([Actividad|Resto]) :-
+    actividad(Actividad, Precio, Duracion, Descripcion, Tipos),
+    format('~w - Precio: ~w, Duración: ~w horas, Descripción: ~w, Tipos: ~w~n',
+           [Actividad, Precio, Duracion, Descripcion, Tipos]),
+    listar_actividades(Resto).
+
+
 %Ordenar actividades por duración
 :- dynamic ordenar_por_duracion/2.
 :- dynamic ordenar_por_variedad_tipos/2.
