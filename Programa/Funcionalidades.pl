@@ -295,6 +295,61 @@ listar_actividades([Actividad|Resto]) :-
     listar_actividades(Resto).
 
 
+% Estadísticas
+mostrar_estadisticas :-
+    nl, write('=== ESTADÍSTICAS DEL SISTEMA ==='), nl,
+    ciudades_mas_actividades,
+    actividad_mas_cara,
+    actividad_menor_duracion,
+    categoria_mas_actividades.
+
+ciudades_mas_actividades :-
+    write('Top 3 ciudades con más actividades:'), nl,
+    findall(Dest-Cant,
+            (destino(Dest, _),
+             aggregate_all(count, asociar_actividad(Dest, _), Cant)),
+            Pares),
+    sort(2, @>=, Pares, Ordenados),
+    take(3, Ordenados, Top3),
+    mostrar_top3_ciudades(Top3).
+
+actividad_mas_cara :-
+    write('Actividad más cara:'), nl,
+    findall(Costo-Nombre,
+            actividad(Nombre, Costo, _, _, _),
+            Pares),
+    max_member(MaxCosto-ActCara, Pares),
+    actividad(ActCara, MaxCosto, Dur, Desc, _),
+    write('Nombre: '), write(ActCara), nl,
+    write('Costo: $'), write(MaxCosto), nl,
+    write('Duración: '), write(Dur), write(' días'), nl,
+    write('Descripción: '), write(Desc), nl.
+
+actividad_menor_duracion :-
+    write('Actividad de menor duración:'), nl,
+    findall(Dur-Nombre,
+            actividad(Nombre, _, Dur, _, _),
+            Pares),
+    min_member(MinDur-ActCorta, Pares),
+    actividad(ActCorta, Costo, MinDur, Desc, _),
+    write('Nombre: '), write(ActCorta), nl,
+    write('Costo: $'), write(Costo), nl,
+    write('Duración: '), write(MinDur), write(' días'), nl,
+    write('Descripción: '), write(Desc), nl.
+
+categoria_mas_actividades :-
+    write('Categoría con más actividades:'), nl,
+    findall(Tipo-1,
+            (actividad(_, _, _, _, Tipos),
+             member(Tipo, Tipos)),
+            ParesPlanos),
+    group_pairs_by_key(ParesPlanos, Agrupados),
+    maplist(sumar_valores, Agrupados, Contados),
+    max_member(Cant-Tipo, Contados),
+    write('Categoría: '), write(Tipo), nl,
+    write('Cantidad de actividades: '), write(Cant), nl.
+
+
 %Ordenar actividades por duración
 :- dynamic ordenar_por_duracion/2.
 :- dynamic ordenar_por_variedad_tipos/2.
