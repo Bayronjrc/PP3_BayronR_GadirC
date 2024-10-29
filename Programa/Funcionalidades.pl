@@ -234,6 +234,7 @@ generar_itinerario_dias(MaxDias, Categoria, Criterio, Itinerario) :-
     ),
     seleccionar_actividades_dias(ActividadesOrdenadas, MaxDias, Categoria, [], Itinerario).
 
+ 
 % Opción principal para recomendar por frase
 recomendar_por_frase :-
     write('Ingrese su frase de búsqueda: '),
@@ -251,6 +252,7 @@ palabra_ignorada(y).
 palabra_ignorada(en).
 palabra_ignorada(con).
 palabra_ignorada(por).
+palabra_ignorada(me).
 
 % Generar el itinerario basándose en la frase
 generar_itinerario_por_frase(Frase) :-
@@ -348,6 +350,89 @@ categoria_mas_actividades :-
     max_member(Cant-Tipo, Contados),
     write('Categoría: '), write(Tipo), nl,
     write('Cantidad de actividades: '), write(Cant), nl.
+
+% Funciones auxiliares
+sumar_valores(Tipo-Valores, Cantidad-Tipo) :-
+    length(Valores, Cantidad).
+
+take(N, List, Taken) :-
+    length(Taken, N),
+    append(Taken, _, List).
+
+mostrar_top3_ciudades([]).
+mostrar_top3_ciudades([Ciudad-Cant|Resto]) :-
+    write(Ciudad), write(': '), write(Cant), write(' actividades'), nl,
+    mostrar_top3_ciudades(Resto).
+
+prioridad_categoria(Tipos, Categoria, 4) :- % Categoría igual
+    member(Categoria, Tipos), !.
+prioridad_categoria(Tipos, Categoria, 3) :- % Categoría afín
+    member(Tipo, Tipos),
+    categorias_relacionadas(Tipo, Categoria), !.
+prioridad_categoria(Tipos, Categoria, 2) :- % Categoría adicional igual
+    member(Tipo, Tipos),
+    actividad(_, _, _, _, OtrosTipos),
+    member(Tipo, OtrosTipos),
+    member(Categoria, OtrosTipos), !.
+prioridad_categoria(Tipos, Categoria, 1) :- % Categoría adicional afín
+    member(Tipo, Tipos),
+    actividad(_, _, _, _, OtrosTipos),
+    member(Tipo, OtrosTipos),
+    member(OtroTipo, OtrosTipos),
+    categorias_relacionadas(OtroTipo, Categoria), !.
+prioridad_categoria(_, _, 0).
+
+ordenar_por_preferencia(Actividades, s, Ordenadas) :-
+    sort(3, @>=, Actividades, Ordenadas).
+ordenar_por_preferencia(Actividades, n, Ordenadas) :-
+    sort(3, @=<, Actividades, Ordenadas).
+
+suma_costos([], _, 0).
+suma_costos([act(_, Costo, _, _)|Resto], NumPersonas, Total) :-
+    suma_costos(Resto, NumPersonas, SubTotal),
+    Total is SubTotal + (Costo * NumPersonas).
+
+mostrar_itinerario([]) :-
+    write('No se encontraron actividades que cumplan con los criterios.'), nl.
+mostrar_itinerario(Itinerario) :-
+    write('Actividades seleccionadas:'), nl,
+    mostrar_actividades_itinerario(Itinerario),
+    calcular_totales_itinerario(Itinerario).
+
+mostrar_actividades_itinerario([]).
+mostrar_actividades_itinerario([act(Nombre, Costo, Duracion, Tipos)|Resto]) :-
+    write('- '), write(Nombre), nl,
+    write('  Costo: $'), write(Costo), nl,
+    write('  Duración: '), write(Duracion), write(' días'), nl,
+    write('  Tipos: '), write(Tipos), nl,
+    mostrar_actividades_itinerario(Resto).
+
+calcular_totales_itinerario(Itinerario) :-
+    findall(Costo, member(act(_, Costo, _, _), Itinerario), Costos),
+    findall(Duracion, member(act(_, _, Duracion, _), Itinerario), Duraciones),
+    sum_list(Costos, CostoTotal),
+    sum_list(Duraciones, DuracionTotal),
+    nl, write('=== TOTALES ==='), nl,
+    write('Costo total: $'), write(CostoTotal), nl,
+    write('Duración total: '), write(DuracionTotal), write(' días'), nl.
+
+% Predicado auxiliar para búsqueda sin distinción de mayúsculas/minúsculas
+sub_atom_icaso(Atom, Before, Length, After, SubAtom) :-
+    atom_chars(Atom, Chars),
+    atom_chars(SubAtom, SubChars),
+    maplist(to_lower, Chars, LowerChars),
+    maplist(to_lower, SubChars, LowerSubChars),
+    append(BeforeChars, Rest, LowerChars),
+    length(BeforeChars, Before),
+    append(MatchChars, AfterChars, Rest),
+    length(AfterChars, After),
+    length(MatchChars, Length),
+    MatchChars = LowerSubChars.
+
+to_lower(Char, LowerChar) :-
+    atom_chars(CharAtom, [Char]),
+    downcase_atom(CharAtom, LowerAtom),
+    atom_chars(LowerAtom, [LowerChar]).
 
 
 %Ordenar actividades por duración
