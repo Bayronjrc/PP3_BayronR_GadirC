@@ -34,21 +34,3 @@ asociar_actividad(roma, coliseo_romano).
 asociar_actividad(barcelona, sagrada_familia).
 asociar_actividad(tokyo, monte_fuji).
 
-% Reglas de inferencia sobre categorías (afinidad)
-categoria_afin(arte, cultura).
-categoria_afin(cultura, arte).
-categoria_afin(historia, arquitectura).
-categoria_afin(arquitectura, historia).
-categoria_afin(panorama, diversion).
-categoria_afin(diversion, panorama).
-categoria_afin(romantico, gastronomia).
-categoria_afin(gastronomia, romantico).
-categoria_afin(naturaleza, educativo).
-categoria_afin(educativo, naturaleza).
-categoria_afin(experiencia, aventura).
-categoria_afin(aventura, experiencia).
-
-% Regla para verificar si dos categorías están relacionadas
-categorias_relacionadas(Cat1, Cat2) :- 
-    categoria_afin(Cat1, Cat2);
-    categoria_afin(Cat2, Cat1).
